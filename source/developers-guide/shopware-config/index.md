@@ -89,11 +89,11 @@ The default value of `error_reporting` should be sufficient for developing.
     ],
 ```
 
-The difference between `throwExceptions` and `showExceptions` is how an exception will be handled.
+The difference between `throwExceptions` and `showException` is how an exception will be handled.
 
 The option `showException` keeps the Shopware error handler enabled, catches the PHP exception and prints the message instead of showing the generic "Oops! An error has occurred!" message.
 
-In contrast, the option `throwExceptions` skips the Shopware error handler and outputs the pure PHP exception. This is important to understand, because some errors need to be catched by the Shopware error handler for self-healing processes e.g. CSRF Token invalidation.
+In contrast, the option `throwExceptions` skips the Shopware error handler and outputs the pure PHP exception. This is important to understand, because some errors need to be caught by the Shopware error handler for self-healing processes e.g. CSRF Token invalidation.
 
 ### Template
 
@@ -106,6 +106,16 @@ In contrast, the option `throwExceptions` skips the Shopware error handler and o
 ```
 
 This option controls the smarty template caching. Normally you have to clear your cache after every change on the template, but if you set `forceCompile` to `true` your template will be compiled on every reload. This should be an essential option for every developer. Keep in mind that it does have a great impact on loading times and should never be used in production.
+
+### Template security
+
+```
+    'template_security' => [
+        'php_modifiers' => ['shell_exec', 'strpos'],
+        'php_functions' => ['shell_exec', 'strpos'],
+    ],
+```
+This option is available since version 5.2.26 and controls the smarty security configuration. Normally shopware has a whitelist of allowed php modifiers and functions for smarty template, but if you need additional php function in your template, you can extend the whitelist by this configuration.
 
 ### Cache
 
@@ -153,7 +163,7 @@ return [
     ],
     
     'front' => [
-        'throwException' => true,
+        'throwExceptions' => true,
         'showException' => true
     ],
 
@@ -189,13 +199,15 @@ With Shopware 5.3 it is possible to use [redis](https://redis.io/) as cache adap
 'cache' => [
     'backend' => 'redis', // e.G auto, apcu, xcache
     'backendOptions' => [
-        'servers' => array(
-            array(
+        'servers' => [
+            [
                 'host' => '127.0.0.1',
                 'port' => 6379,
-                'dbindex' => 0
-            ),
-        ),
+                'dbindex' => 0,
+                'redisAuth' => ''
+            ],
+        ],
     ],
 ]
 ```
+Be aware, that for Zend_Cache::CLEANING_MODE_ALL the cache implementation will issue "FLUSHDB" and therefore clear the current redis db index. For that reason, the db index for the cache should not be used for persistent data. 

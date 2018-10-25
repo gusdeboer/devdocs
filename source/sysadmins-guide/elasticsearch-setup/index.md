@@ -11,7 +11,7 @@ redirect:
 indexed: true
 group: System Guides
 menu_title: Elasticsearch setup
-menu_order: 50
+menu_order: 60
 ---
 
 <div class="toc-list"></div>
@@ -32,7 +32,8 @@ Shopware 5.0 is able to provide a seamless Elasticsearch integration that will g
 ## Installation and configuration
 
 To enable Elasticsearch integration, you must configure both your server and your Shopware 5 installation. 
-Elasticsearch 2.0 or newer is required.
+Elasticsearch 2.0 or newer is required. For Elasticsearch 6.0 Shopware 5.5 is required
+
 
 ### Elasticsearch installation and configuration
 
@@ -45,9 +46,8 @@ The current Shopware 5 integration is designed to work with the out-of-the-box c
 By default, Elasticsearch integration is disabled in Shopware, as most shops won't benefit from it. Like mentioned before, Elasticsearch should only be used in shops containing a large set of items.
 
 To enable Elasticsearch (provided it's already installed, configured and running), edit your `config.php` file, adding the following array:
-
 ```
-[
+...
     'es' => [
         'enabled' => true,
         'number_of_replicas' => null,
@@ -59,7 +59,32 @@ To enable Elasticsearch (provided it's already installed, configured and running
         ]
     ],
     // Other configuration settings...
-]
+...
+```
+
+Your config.php should look like this now:
+```
+<?php
+return [
+    'db' => [
+        'username' => 'dbuser',
+        'password' => 'dbpw',
+        'dbname' => 'dbname',
+        'host' => 'localhost',
+        'port' => '3306',  
+    ],
+    'es' => [
+        'enabled' => true,
+        'number_of_replicas' => null,
+        'number_of_shards' => null,
+        'client' => [
+            'hosts' => [
+                'localhost:9200'
+            ]
+        ]
+    ],
+    // Other configuration settings...
+];
 ```
 
 Shopware 5 communicates with Elasticsearch using the latter's REST API. The `hosts` array accepts multiple address syntaxes, about which you can read more [here](https://www.elastic.co/guide/en/elasticsearch/client/php-api/current/_configuration.html#_host_configuration). The `number_of_shards` and `number_of_replicas` parameter provided to the generated index. A `null` configuration allows to use the elastic search server configuration of this parameters.
@@ -147,7 +172,7 @@ Traced models:
 - `Shopware\Models\Article\Detail`
 - `Shopware\Models\Article\Price`
 
-When changes to entities belonging to these models are done, they are immediately saved in the MySQL database, but propagation to Elasticsearch is delayed until the next execution of the `sw:es:sync:backlog` command.
+When changes to entities belonging to these models are done, they are immediately saved in the MySQL database, but propagation to Elasticsearch is delayed until the next execution of the `sw:es:backlog:sync` command.
 
 ### Rebuilding the search index
 
@@ -188,3 +213,57 @@ php bin/console sw:es:backlog:clear
 ```
 
 As such, it's safe to run this command even on production environments, provided you have ensured that your current index is working as intended.
+
+## Elasticsearch in Backend
+
+Since Shopware 5.5 it is also possible to use Elasticsearch in the backend for listing and search operations for products, orders and customers. To use this you need to adjust your `config.php` to
+
+```php
+return [
+    'db' => [
+        'username' => 'dbuser',
+        'password' => 'dbpw',
+        'dbname' => 'dbname',
+        'host' => 'localhost',
+        'port' => '3306',  
+    ],
+    'es' => [
+        'enabled' => true,
+        'number_of_replicas' => null,
+        'number_of_shards' => null,
+        'client' => [
+            'hosts' => [
+                'localhost:9200'
+            ]
+        ],
+        'backend' => [
+            'write_backlog' => true,
+            'enabled' => true,
+        ],
+    ],
+];
+```
+
+### Initial data import
+
+Once Shopware is configured for using Elasticsearch in the backend, you should execute the following Shopware CLI command:
+
+```
+php bin/console sw:es:backend:index:populate
+```
+
+#### Live synchronization
+
+The `sw:es:backend:sync` command ensures your latest changes are propagated into Elasticsearch. It uses a queueing system, and it's execution time may greatly vary, depending on the pending operation list content. This command should be executed periodically to ensure data consistency.
+
+```
+php bin/console sw:es:backend:sync
+```
+
+#### Index cleanup
+
+After a new index is created, the old one is no longer used, but is not deleted. Should your new index be corrupted, you can just replace it with the old one, and have your shop running again without downtime. However, as new indexes should be created often (recommended every 24 hours), old indexes can accumulate and start taking up a significant amount of resources. Shopware provides a tool to cleanup those old indexes:
+
+```bash
+php sw:es:backend:index:cleanup
+```

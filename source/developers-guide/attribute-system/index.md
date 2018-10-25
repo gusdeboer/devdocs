@@ -36,7 +36,7 @@ Following types are supported:
 
 | Unified type        | SQL type           | Backend view  |
 | ------------- |:-------------:| -----:|
-| string            | VARCHAR(500)  | Ext.form.field.Text
+| string            | TEXT          | Ext.form.field.Text
 | text              | TEXT          | Ext.form.field.TextArea
 | html              | MEDIUMTEXT    | Shopware.form.field.TinyMCE
 | integer           | INT(11)       | Ext.form.field.Number
@@ -115,6 +115,8 @@ class SwagAttribute extends Plugin
 namespace SwagAttribute;
 
 use Shopware\Components\Plugin;
+use Shopware\Components\Plugin\Context\UninstallContext;
+
 
 class SwagAttribute extends Plugin
 {
@@ -308,7 +310,7 @@ class SwagAttribute extends Plugin
         /** @var \Enlight_View_Default $view */
         $view = $arguments->getSubject()->View();
 
-        $view->addTemplateDir($this->getPath() . '/Views/');
+        $view->addTemplateDir($this->getPath() . '/Resources/views/');
 
         $view->extendsTemplate('backend/swag_attribute/Shopware.attribute.Form.js');
     }
@@ -369,7 +371,7 @@ Ext.define('Shopware.attribute.Form-SwagAttribute', {
 ```
 
 This example only shows a small validation to `allowBlank: false` and defines a minimum string length of 10. ExtJS supports different validation functions for an `Ext.form.field.Base`, for more information see:
-[ExtJs Docs](http://docs.sencha.com/extjs/4.1.3/#!/api/Ext.form.field.VTypes)
+[ExtJs Docs](http://docs.sencha.com/extjs/4.1.1/#!/api/Ext.form.field.VTypes)
 
 ### Define own backend view
 In some cases it is required to define an own view for the backend attribute which is not kind of the default view elements.
@@ -819,7 +821,7 @@ class SwagShoeSize extends Plugin
 ```
 
 ### Adding an input element for the attribute to the registration form
-We create the template `Resources/Views/frontend/register/personal_fieldset.tpl` and extend the block where we want the input to show up. The attribute is persisted automatically along with the registered customer.
+We create the template `Resources/views/frontend/register/personal_fieldset.tpl` and extend the block where we want the input to show up. The attribute is persisted automatically along with the registered customer.
 
 ```
 {extends file="parent:frontend/register/personal_fieldset.tpl"}
@@ -837,7 +839,7 @@ We create the template `Resources/Views/frontend/register/personal_fieldset.tpl`
 **Attention**: Although the field names are defined in snake_case when created using the CRUD-service, you need to use camelCase in name attributes. This is necessary due to the way the internally used FormBuilder works. 
 
 ### Show attributes in the frontend
-Attributes are loaded automatically with the entity they belong to. To display the shoesize in the account we create `Resources/Views/frontend/account/index.tpl`:
+Attributes are loaded automatically with the entity they belong to. To display the shoesize in the account we create `Resources/views/frontend/account/index.tpl`:
  
 ```
 {extends file="parent:frontend/account/index.tpl"}
@@ -905,95 +907,73 @@ s_articles_attributes_my_column_helpText = "Deutscher help text"
 ```
 
 ## Product slider based on attributes
-__As of Shopware 5.3__ it is easily possible to create product slider with the help of attributes and the listing widgets:
-* `Shopware/Controllers/Widgets/Listing.php` - `streamSliderAction`
-* `Shopware/Controllers/Widgets/Listing.php` - `productSliderAction`
+__As of Shopware 5.3__ it is easily possible to display additional product sliders or box listing with the help of attributes and the listing widgets.
+The following functions allows to display product templates based on a product stream or a selection of product numbers:
+* `Shopware/Controllers/Widgets/Listing.php::streamAction`
+* `Shopware/Controllers/Widgets/Listing.php::productsAction`
 
-These can be used to create individual product slider. For example individual product slider for customers which will be shown in their account section. Here are two screenshots which illustrate that scenario:
+The following example displays additional products in a customer account. 
+First the s_user_attributes table get two new columns:
+- `recommendedVariants` - "Multi selection - Variants` - which should be displayed
+- `recommendedStream` - "Single selection - Product Stream" - which should be displayed
 
-<img src="img/customer.jpg" alt="customer details" class="image-border" width="800px" />
+<img src="img/customer.jpg" alt="customer details" class="image-border" />
 
-Choose a product stream and some variants for the customer with the help of attribute fields.
-
-<img src="img/account.jpg" alt="customer account" class="image-border" width="800px" />
-
-Use these information to create recommendations in the customers account section.  
-The following example plugin demonstrates how this works.
-### Bootstrap
-`SwagAttributeSlider/SwagAttributeSlider.php`:
+In case of a plugin, use the following code:
 ```
-<?php
+/** @var CrudService $crud */
+$crud = $this->container->get('shopware_attribute.crud_service');
 
-namespace SwagAttributeSlider;
-
-use Shopware\Bundle\AttributeBundle\Service\CrudService;
-use Shopware\Components\Plugin;
-use Shopware\Components\Plugin\Context\InstallContext;
-
-class SwagAttributeSlider extends Plugin
-{
-    /**
-     * @param InstallContext $context
-     */
-    public function install(InstallContext $context)
-    {
-        /** @var CrudService $crud */
-        $crud = $this->container->get('shopware_attribute.crud_service');
-
-        $crud->update('s_user_attributes', 'recommendedVariants', 'multi_selection', [
-            'displayInBackend' => true,
-            'label' => 'Recommended variants',
-            'entity' => 'Shopware\Models\Article\Detail',
-        ]);
-        $crud->update('s_user_attributes', 'recommendedStream', 'single_selection', [
-            'displayInBackend' => true,
-            'label' => 'Recommended stream',
-            'entity' => 'Shopware\Models\ProductStream\ProductStream',
-        ]);
-    }
-
-    public static function getSubscribedEvents()
-    {
-        return [
-            'Enlight_Controller_Action_PostDispatch_Frontend_Account' => 'onPostDispatchAccount',
-        ];
-    }
-
-    /**
-     * @param \Enlight_Event_EventArgs $args
-     */
-    public function onPostDispatchAccount(\Enlight_Event_EventArgs $args)
-    {
-        /** @var $controller \Shopware_Controllers_Frontend_Account */
-        $controller = $args->get('subject');
-        $controller->View()->addTemplateDir($this->getPath() . '/Resources/views');
-    }
-}
+$crud->update('s_user_attributes', 'recommendedVariants', 'multi_selection', [
+    'displayInBackend' => true,
+    'label' => 'Recommended variants',
+    'entity' => 'Shopware\Models\Article\Detail',
+]);
+$crud->update('s_user_attributes', 'recommendedStream', 'single_selection', [
+    'displayInBackend' => true,
+    'label' => 'Recommended stream',
+    'entity' => 'Shopware\Models\ProductStream\ProductStream',
+]);
 ```
-Create new attributes in the `s_user_attributes` table:
-* `single_selection` column is mapped to the `Shopware\Models\ProductStream\ProductStream` entity for the product stream slider
-* `multi_selection` column is mapped to the `Shopware\Models\Article\Detail` entity for product variant slider
 
-Subscribe to the `Enlight_Controller_Action_PostDispatch_Frontend_Account` event to register your template.
-### Template extension
-`SwagAttributeSlider/Resources/views/frontend/account/index.tpl`
+To display the data in the account section, add the following source code to a template which extends the `frontend/account/index.tpl`:
+
 ```
 {extends file="parent:frontend/account/index.tpl"}
 {block name="frontend_account_index_welcome"}
-	{$smarty.block.parent}
+    {$smarty.block.parent}
 
-	{$data = $sUserData.additional.user}
+    {$data = $sUserData.additional.user}
 
-	<h2>Recommended variants for you</h2>
+    <h2>Recommended variants for you</h2>
 
-	{action module=widgets controller=listing action=productSlider numbers=$data.recommendedvariants}
+    {action module=widgets controller=listing action=products numbers=$data.recommendedvariants type=slider}
 
-	<h2>Recommended stream</h2>
+    <h2>Recommended stream</h2>
 
-	{action module=widgets controller=listing action=streamSlider streamId=$data.recommendedstream}
+    {action module=widgets controller=listing action=stream streamId=$data.recommendedstream type=slider} 
 
 {/block}
 ```
+To display a list of product boxes, the `type=slider` property has to be removed:
+
+```
+{extends file="parent:frontend/account/index.tpl"}
+{block name="frontend_account_index_welcome"}
+    {$smarty.block.parent}
+
+    {$data = $sUserData.additional.user}
+
+    <h2>Recommended variants for you</h2>
+
+    {action module=widgets controller=listing action=products numbers=$data.recommendedvariants productBoxLayout='list'}
+
+    <h2>Recommended stream</h2>
+
+    {action module=widgets controller=listing action=stream streamId=$data.recommendedstream productBoxLayout='image'} 
+{/block}
+```
+
 Within the template file the widgets actions are called with the given customer attribute data. 
 Thats it. Now choose individual products or streams which will be shown to the customer.
 

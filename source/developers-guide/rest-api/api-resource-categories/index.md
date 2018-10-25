@@ -53,7 +53,7 @@ Single category details can be retrieved via the category ID:
 | blog                | boolean               |                                                                               |
 | path                | string                |                                                                               |
 | showFilterGroups    | boolean               |                                                                               |
-| external            | boolean               |                                                                               |
+| external            | string                |                                                                               |
 | hideFilter          | boolean               |                                                                               |
 | hideTop             | boolean               |                                                                               |
 | changed             | DateTime              |                                                                               |
@@ -65,6 +65,7 @@ Single category details can be retrieved via the category ID:
 | customerGroups      | array                 |                                                                               |
 | childrenCount       | integer               |                                                                               |
 | articleCount        | integer               |                                                                               |
+| translations        | object array          | **[Translation](../models/#translation)**                                     |
 
 ## GET (List)
 
@@ -117,6 +118,7 @@ Appended to the above mentioned list, you will also find the following data:
 | parent              | object                | Required if no parentId is provided                  | **[Category](../models/#category)**                                             |
 | parentId            | integer               |                                                      | `s_category.id`                                                                 |
 | position            | integer               |                                                      |                                                                                  |
+| metaTitle           | string                |                                                         |                                                                                  |
 | metaKeywords        | string                |                                                         |                                                                                  |
 | metaDescription      | string                  |                                                      |                                                                                  |
 | cmsHeadline          | string                  |                                                      |                                                                                  |
@@ -134,6 +136,7 @@ Appended to the above mentioned list, you will also find the following data:
 | added               | date/time              |                                                      |                                                                                  |
 | attribute           | array                  | Array with optional indexes from 1-6 and its values |                                                                                  |
 | media                | array                  | Array with either `mediaId` or `link` property |                                                                                  |
+| translations         | array                  | Array with either `shopId` `link` property and fields that should be translated | **[Translation](../models/#translation)**                                        |
 
 
 ## DELETE
